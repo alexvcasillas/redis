@@ -1,0 +1,24 @@
+{
+  "name": "bun-redis",
+  "module": "src/server.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "start": "bun run src/server.ts",
+    "test": "bun test",
+    "build": "bun build ./src/server.ts --compile --minify --sourcemap --bytecode --outfile bun-redis-server",
+    "bench:set": "redis-benchmark -h 127.0.0.1 -t SET -n 100000 -c 50",
+    "bench:get": "redis-benchmark -h 127.0.0.1 -t GET -n 100000 -c 50",
+    "bench": "bun run bench:set && bun run bench:get",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write --unsafe ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "1.8.3",
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
