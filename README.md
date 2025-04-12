@@ -173,4 +173,4 @@ Please see `CONTRIBUTING.md` for details.
 
 ## License
 
-Please see `LICENSE` for details.
+Please see `LICENSE.md` for details.
