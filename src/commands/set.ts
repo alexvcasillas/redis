@@ -1,30 +1,32 @@
-import { type Socket } from "bun";
-import { formatSimpleString, formatError } from "./index";
-import { type KeyValueStore } from "../store/store";
+import type { Socket } from "bun";
+import type { KeyValueStore } from "../store/store";
+import { formatError, formatSimpleString } from "./index";
 
 export function handleSet(
-    args: string[],
-    socket: Socket,
-    store: KeyValueStore
+	args: string[],
+	socket: Socket,
+	store: KeyValueStore,
 ): void {
-    if (args.length !== 2) {
-        socket.write(formatError("ERR wrong number of arguments for 'set' command"));
-        return;
-    }
+	if (args.length !== 2) {
+		socket.write(
+			formatError("ERR wrong number of arguments for 'set' command"),
+		);
+		return;
+	}
 
-    const key = args[0];
-    const value = args[1];
+	const key = args[0];
+	const value = args[1];
 
-    if (key === undefined || value === undefined) {
-        // Should be caught by length check, but belts and suspenders
-        socket.write(formatError("ERR syntax error"));
-        return;
-    }
+	if (key === undefined || value === undefined) {
+		// Should be caught by length check, but belts and suspenders
+		socket.write(formatError("ERR syntax error"));
+		return;
+	}
 
-    // Store value as Buffer
-    store.set(key, Buffer.from(value));
+	// Store value as Buffer
+	store.set(key, Buffer.from(value));
 
-    // TODO: Handle options like EX, PX, NX, XX
+	// TODO: Handle options like EX, PX, NX, XX
 
-    socket.write(formatSimpleString("OK"));
+	socket.write(formatSimpleString("OK"));
 }
