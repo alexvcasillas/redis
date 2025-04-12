@@ -19,28 +19,35 @@ bun start
 This server currently supports the following Redis commands:
 
 **PING:** Checks if the server is alive. Returns "PONG" if no argument is provided, otherwise returns the argument.
-```
+
+```redis
 > PING
 +PONG
 > PING "hello world"
 $11
 hello world
-    ```
-**SET:** Sets a key-value pair.
 ```
+
+**SET:** Sets a key-value pair.
+
+```redis
 > SET mykey myvalue
 +OK
 ```
+
 **GET:** Retrieves the value associated with a key.
-```
+
+```redis
 > GET mykey
 $7
 myvalue
 > GET nonexistingkey
 $-1
 ```
+
 **DEL:** Deletes one or more keys. Returns the number of keys deleted.
-```
+
+```redis
 > SET key1 val1
 +OK
 > SET key2 val2
@@ -50,7 +57,8 @@ $-1
 ```
 
 **CONFIG:** (Currently limited) Used to get configuration parameters.
-```
+
+```redis
 > CONFIG GET dir
 *2
 $3
@@ -67,9 +75,15 @@ $1
 
 ## Benchmarks
 
-`redis-benchmark -h 127.0.0.1 -t SET -n 100000 -c 50`
+Using `redis-benchmark`:
+
+**SET Command:**
 
 ```bash
+redis-benchmark -h 127.0.0.1 -t SET -n 100000 -c 50
+```
+
+```
 Latency by percentile distribution:
 0.000% <= 0.111 milliseconds (cumulative count 1)
 50.000% <= 0.423 milliseconds (cumulative count 50179)
@@ -118,9 +132,13 @@ Summary:
         0.454     0.104     0.423     0.727     1.087     1.903
 ```
 
-`redis-benchmark -h 127.0.0.1 -t GET -n 100000 -c 50`
+**GET Command:**
 
 ```bash
+redis-benchmark -h 127.0.0.1 -t GET -n 100000 -c 50
+```
+
+```
 Latency by percentile distribution:
 0.000% <= 0.095 milliseconds (cumulative count 1)
 50.000% <= 0.415 milliseconds (cumulative count 50138)
