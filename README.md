@@ -1,6 +1,6 @@
 # Bun Redis Server
 
-A simple Redis server implementation using Bun.
+A Redis server implementation in Bun.
 
 ## Installation
 
@@ -8,10 +8,17 @@ A simple Redis server implementation using Bun.
 bun install
 ```
 
-## Usage
+## Development
 
 ```bash
-bun start
+bun run dev
+```
+
+## Production
+
+```bash
+bun run build
+./bun-redis-server
 ```
 
 ## Features
