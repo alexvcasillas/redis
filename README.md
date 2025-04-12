@@ -22,38 +22,34 @@ This server currently supports the following Redis commands:
 
 ```redis
 > PING
-+PONG
+PONG
 > PING "hello world"
-$11
 hello world
 ```
 
 **SET:** Sets a key-value pair.
 
 ```redis
-> SET mykey myvalue
-+OK
+> SET color red
+OK
 ```
 
 **GET:** Retrieves the value associated with a key.
 
 ```redis
-> GET mykey
-$7
-myvalue
+> GET color
+red
 > GET nonexistingkey
-$-1
+(nil)
 ```
 
 **DEL:** Deletes one or more keys. Returns the number of keys deleted.
 
 ```redis
-> SET key1 val1
-+OK
-> SET key2 val2
-+OK
-> DEL key1 key2 nonexistingkey
-:2
+> DEL color
+(integer) 1
+> DEL nonexistingkey
+(integer) 0
 ```
 
 **CONFIG:** (Currently limited) Used to get configuration parameters.
