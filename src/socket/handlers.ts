@@ -1,8 +1,9 @@
 import type { Socket } from "bun";
 import { RESPParser } from "../protocol/parser";
-import { commandMap, formatError } from "../commands/index";
+import { commandMap } from "../commands/index";
 import { store } from "../store/store";
 import { debug } from "../utils/debug";
+import { formatError } from "../protocol/resp";
 
 // Use WeakMap to store parser instances per socket
 const clientParsers = new WeakMap<Socket, RESPParser>();

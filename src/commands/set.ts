@@ -1,6 +1,6 @@
 import type { Socket } from "bun";
 import type { KeyValueStore } from "../store/store";
-import { formatError, formatSimpleString } from "./index";
+import { formatError, formatSimpleString } from "../protocol/resp";
 
 export function handleSet(
 	args: string[],

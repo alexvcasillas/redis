@@ -1,6 +1,6 @@
 import type { Socket } from "bun";
 import type { KeyValueStore } from "../store/store";
-import { formatBulkString, formatError, formatNull } from "./index";
+import { formatBulkString, formatError, NULL_RESPONSE } from "../protocol/resp";
 
 // Pre-format common error for GET
 const GET_WRONG_ARGS = formatError(
@@ -20,15 +20,15 @@ export function handleGet(
 
 	const key = args[0];
 
-	if (key === undefined) {
+	if (!key) {
 		socket.write(GET_SYNTAX_ERROR);
 		return;
 	}
 
 	const value = store.get(key);
 
-	if (value === undefined) {
-		socket.write(formatNull()); // Key not found
+	if (!value) {
+		socket.write(NULL_RESPONSE); // Key not found
 	} else {
 		socket.write(formatBulkString(value)); // Return value as Buffer
 	}

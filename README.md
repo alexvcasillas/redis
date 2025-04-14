@@ -78,26 +78,33 @@ $1
 
 ## Benchmarks
 
-All benchmarks below represent averages from 10 runs each, using `redis-benchmark` with 100,000 operations per test.
+All benchmarks represent statistical analysis from 30 runs each, using `redis-benchmark` with 100,000 operations per test.
 
-Bun Redis implementation (averaged over 10 runs):
-- SET: ~158,211.82 requests per second (p50=0.143-0.239 msec)
-- GET: ~157,587.95 requests per second (p50=0.143-0.255 msec)
+Bun Redis implementation (30 runs):
+- SET: 161,729.57 ±3,452.67 req/sec (95% CI) [p50=0.143-0.247 msec]
+- GET: 165,915.76 ±5,218.45 req/sec (95% CI) [p50=0.135-0.247 msec]
 
-Official Redis server (averaged over 10 runs):
-- SET: ~163,013.53 requests per second (p50=0.127-0.231 msec)
-- GET: ~160,759.53 requests per second (p50=0.127-0.239 msec)
+Official Redis server (30 runs):
+- SET: 173,477.73 ±2,952.97 req/sec (95% CI) [p50=0.127-0.175 msec]
+- GET: 177,481.51 ±4,636.00 req/sec (95% CI) [p50=0.127-0.231 msec]
 
 Performance Analysis:
-- SET operations: Our implementation is ~2.95% slower than Redis
-- GET operations: Our implementation is ~1.97% slower than Redis
+- SET operations: Our implementation is ~6.77% slower than Redis (±1.89% CI)
+- GET operations: Our implementation is ~6.52% slower than Redis (±2.12% CI)
+
+Statistical Insights:
+- Our implementation shows slightly higher variance in performance
+- Both implementations have occasional performance outliers
+- Redis shows more consistent baseline performance
+- Latency (p50) ranges are comparable between implementations
 
 Performance Summary:
-- Both SET and GET operations are within ~3% of Redis performance
-- Consistent performance across multiple runs
-- Latency (p50) is comparable between both implementations
+- Both SET and GET operations maintain consistent performance within confidence intervals
+- Performance gap with Redis is statistically significant but stable
+- Latency remains competitive across implementations
+- System load variations affect both implementations similarly
 
-Note: Benchmark results can vary based on system load, hardware, and other environmental factors. These numbers represent performance on a MacOS system under specific test conditions. Each implementation's numbers were gathered from separate benchmark sessions.
+Note: Benchmark results can vary based on system load, hardware, and other environmental factors. These numbers represent performance on a MacOS system under specific test conditions. Each implementation's numbers were gathered from separate benchmark sessions with 2-second cool-down periods between runs to minimize thermal effects.
 
 ### Raw Benchmark Data
 
@@ -106,53 +113,153 @@ Note: Benchmark results can vary based on system load, hardware, and other envir
 ```bash
 Run 1:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 162337.66 requests per second, p50=0.151 msec                    
-GET: 175438.59 requests per second, p50=0.143 msec                    
+SET: 158730.16 requests per second, p50=0.151 msec                    
+GET: 162866.44 requests per second, p50=0.143 msec                    
 
 Run 2:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 157728.70 requests per second, p50=0.167 msec                    
-GET: 157977.88 requests per second, p50=0.159 msec                    
+SET: 164744.64 requests per second, p50=0.151 msec                    
+GET: 186915.88 requests per second, p50=0.135 msec                    
 
 Run 3:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 164203.61 requests per second, p50=0.151 msec                    
-GET: 172117.05 requests per second, p50=0.143 msec                    
+SET: 162866.44 requests per second, p50=0.151 msec                    
+GET: 174216.03 requests per second, p50=0.135 msec                    
 
 Run 4:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 168634.06 requests per second, p50=0.151 msec                    
-GET: 170940.17 requests per second, p50=0.143 msec                    
+SET: 164203.61 requests per second, p50=0.151 msec                    
+GET: 168918.92 requests per second, p50=0.143 msec                    
 
 Run 5:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 168350.17 requests per second, p50=0.143 msec                    
-GET: 149031.30 requests per second, p50=0.175 msec                    
+SET: 165289.25 requests per second, p50=0.151 msec                    
+GET: 167224.08 requests per second, p50=0.143 msec                    
 
 Run 6:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 147058.83 requests per second, p50=0.199 msec                    
-GET: 131926.12 requests per second, p50=0.175 msec                    
+SET: 168918.92 requests per second, p50=0.151 msec                    
+GET: 175438.59 requests per second, p50=0.135 msec                    
 
 Run 7:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 138312.59 requests per second, p50=0.239 msec                    
-GET: 122100.12 requests per second, p50=0.255 msec                    
+SET: 173913.05 requests per second, p50=0.143 msec                    
+GET: 175438.59 requests per second, p50=0.143 msec                    
 
 Run 8:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 144092.22 requests per second, p50=0.231 msec                    
-GET: 169204.73 requests per second, p50=0.143 msec                    
+SET: 158478.61 requests per second, p50=0.159 msec                    
+GET: 156985.86 requests per second, p50=0.151 msec                    
 
 Run 9:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 165562.92 requests per second, p50=0.159 msec                    
-GET: 166112.95 requests per second, p50=0.143 msec                    
+SET: 164473.69 requests per second, p50=0.151 msec                    
+GET: 172413.80 requests per second, p50=0.143 msec                    
 
 Run 10:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 165837.48 requests per second, p50=0.151 msec                    
-GET: 161030.59 requests per second, p50=0.151 msec                    
+SET: 170068.03 requests per second, p50=0.143 msec                    
+GET: 159744.41 requests per second, p50=0.143 msec                    
+
+Run 11:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 166389.34 requests per second, p50=0.143 msec                    
+GET: 172413.80 requests per second, p50=0.143 msec                    
+
+Run 12:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 170940.17 requests per second, p50=0.143 msec                    
+GET: 163934.42 requests per second, p50=0.143 msec                    
+
+Run 13:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 169491.53 requests per second, p50=0.143 msec                    
+GET: 166666.66 requests per second, p50=0.143 msec                    
+
+Run 14:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 161550.89 requests per second, p50=0.151 msec                    
+GET: 170648.45 requests per second, p50=0.143 msec                    
+
+Run 15:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 169779.30 requests per second, p50=0.143 msec                    
+GET: 167224.08 requests per second, p50=0.143 msec                    
+
+Run 16:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 166389.34 requests per second, p50=0.143 msec                    
+GET: 174216.03 requests per second, p50=0.135 msec                    
+
+Run 17:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 164744.64 requests per second, p50=0.151 msec                    
+GET: 173010.38 requests per second, p50=0.135 msec                    
+
+Run 18:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 164203.61 requests per second, p50=0.143 msec                    
+GET: 165289.25 requests per second, p50=0.143 msec                    
+
+Run 19:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 148367.95 requests per second, p50=0.183 msec                    
+GET: 141442.72 requests per second, p50=0.231 msec                    
+
+Run 20:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 157728.70 requests per second, p50=0.159 msec                    
+GET: 168350.17 requests per second, p50=0.143 msec                    
+
+Run 21:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 152905.20 requests per second, p50=0.159 msec                    
+GET: 162074.56 requests per second, p50=0.143 msec                    
+
+Run 22:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 127064.80 requests per second, p50=0.247 msec                    
+GET: 137931.03 requests per second, p50=0.239 msec                    
+
+Run 23:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 157728.70 requests per second, p50=0.151 msec                    
+GET: 134770.89 requests per second, p50=0.167 msec                    
+
+Run 24:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 159489.64 requests per second, p50=0.151 msec                    
+GET: 169779.30 requests per second, p50=0.143 msec                    
+
+Run 25:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 160513.64 requests per second, p50=0.159 msec                    
+GET: 163398.70 requests per second, p50=0.143 msec                    
+
+Run 26:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 156006.25 requests per second, p50=0.151 msec                    
+GET: 173010.38 requests per second, p50=0.135 msec                    
+
+Run 27:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 161550.89 requests per second, p50=0.151 msec                    
+GET: 159235.66 requests per second, p50=0.151 msec                    
+
+Run 28:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 166944.92 requests per second, p50=0.143 msec                    
+GET: 163934.42 requests per second, p50=0.143 msec                    
+
+Run 29:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 154559.50 requests per second, p50=0.159 msec                    
+GET: 123152.71 requests per second, p50=0.247 msec                    
+
+Run 30:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 150150.14 requests per second, p50=0.159 msec                    
+GET: 156250.00 requests per second, p50=0.151 msec                    
 ```
 
 #### Official Redis Server
@@ -160,59 +267,155 @@ GET: 161030.59 requests per second, p50=0.151 msec
 ```bash
 Run 1:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 166112.95 requests per second, p50=0.135 msec                    
-GET: 174520.06 requests per second, p50=0.135 msec                    
+SET: 165562.92 requests per second, p50=0.135 msec                    
+GET: 183486.23 requests per second, p50=0.127 msec                    
 
 Run 2:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 182481.77 requests per second, p50=0.127 msec                    
-GET: 173611.12 requests per second, p50=0.135 msec                    
+SET: 176056.33 requests per second, p50=0.135 msec                    
+GET: 174825.17 requests per second, p50=0.135 msec                    
 
 Run 3:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 147492.62 requests per second, p50=0.175 msec                    
+GET: 140056.03 requests per second, p50=0.223 msec                    
+
+Run 4:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 154320.98 requests per second, p50=0.151 msec                    
+GET: 134228.19 requests per second, p50=0.231 msec                    
+
+Run 5:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 169204.73 requests per second, p50=0.135 msec                    
+GET: 176056.33 requests per second, p50=0.135 msec                    
+
+Run 6:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 182149.36 requests per second, p50=0.127 msec                    
+GET: 184162.06 requests per second, p50=0.127 msec                    
+
+Run 7:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 174216.03 requests per second, p50=0.135 msec                    
+GET: 181818.17 requests per second, p50=0.127 msec                    
+
+Run 8:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 180505.41 requests per second, p50=0.127 msec                    
+GET: 162601.62 requests per second, p50=0.135 msec                    
+
+Run 9:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 164744.64 requests per second, p50=0.135 msec                    
+GET: 175438.59 requests per second, p50=0.135 msec                    
+
+Run 10:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 170357.75 requests per second, p50=0.135 msec                    
+GET: 183486.23 requests per second, p50=0.127 msec                    
+
+Run 11:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 173010.38 requests per second, p50=0.135 msec                    
+GET: 182481.77 requests per second, p50=0.127 msec                    
+
+Run 12:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 177935.95 requests per second, p50=0.135 msec                    
+GET: 180180.17 requests per second, p50=0.135 msec                    
+
+Run 13:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 182149.36 requests per second, p50=0.127 msec                    
+GET: 188679.25 requests per second, p50=0.127 msec                    
+
+Run 14:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 176366.86 requests per second, p50=0.135 msec                    
+GET: 178253.12 requests per second, p50=0.135 msec                    
+
+Run 15:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 176056.33 requests per second, p50=0.135 msec                    
+GET: 184162.06 requests per second, p50=0.127 msec                    
+
+Run 16:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 180180.17 requests per second, p50=0.135 msec                    
+GET: 183486.23 requests per second, p50=0.127 msec                    
+
+Run 17:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 176991.16 requests per second, p50=0.135 msec                    
+GET: 177619.89 requests per second, p50=0.135 msec                    
+
+Run 18:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 180505.41 requests per second, p50=0.127 msec                    
+GET: 176056.33 requests per second, p50=0.135 msec                    
+
+Run 19:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 170940.17 requests per second, p50=0.135 msec                    
+GET: 185185.17 requests per second, p50=0.127 msec                    
+
+Run 20:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 180180.17 requests per second, p50=0.127 msec                    
+GET: 184162.06 requests per second, p50=0.127 msec                    
+
+Run 21:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 173611.12 requests per second, p50=0.135 msec                    
+GET: 183486.23 requests per second, p50=0.127 msec                    
+
+Run 22:
 $ redis-benchmark -t set,get -n 100000 -q
 SET: 170940.17 requests per second, p50=0.135 msec                    
 GET: 177619.89 requests per second, p50=0.135 msec                    
 
-Run 4:
+Run 23:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 170357.75 requests per second, p50=0.135 msec                    
+GET: 189393.94 requests per second, p50=0.127 msec                    
+
+Run 24:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 175131.36 requests per second, p50=0.135 msec                    
+GET: 178253.12 requests per second, p50=0.135 msec                    
+
+Run 25:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 181818.17 requests per second, p50=0.127 msec                    
+GET: 185873.61 requests per second, p50=0.127 msec                    
+
+Run 26:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 179211.45 requests per second, p50=0.127 msec                    
+GET: 179856.11 requests per second, p50=0.135 msec                    
+
+Run 27:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 173913.05 requests per second, p50=0.135 msec                    
+GET: 182815.36 requests per second, p50=0.135 msec                    
+
+Run 28:
 $ redis-benchmark -t set,get -n 100000 -q
 SET: 177935.95 requests per second, p50=0.135 msec                    
-GET: 185185.17 requests per second, p50=0.127 msec                    
+GET: 176678.45 requests per second, p50=0.135 msec                    
 
-Run 5:
+Run 29:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 176366.86 requests per second, p50=0.135 msec                    
-GET: 177619.89 requests per second, p50=0.135 msec                    
+SET: 169779.30 requests per second, p50=0.135 msec                    
+GET: 165016.50 requests per second, p50=0.143 msec                    
 
-Run 6:
+Run 30:
 $ redis-benchmark -t set,get -n 100000 -q
-SET: 180831.83 requests per second, p50=0.127 msec                    
-GET: 156006.25 requests per second, p50=0.143 msec                    
-
-Run 7:
-$ redis-benchmark -t set,get -n 100000 -q
-SET: 171526.58 requests per second, p50=0.135 msec                    
-GET: 164203.61 requests per second, p50=0.143 msec                    
-
-Run 8:
-$ redis-benchmark -t set,get -n 100000 -q
-SET: 131406.05 requests per second, p50=0.231 msec                    
-GET: 121359.23 requests per second, p50=0.239 msec                    
-
-Run 9:
-$ redis-benchmark -t set,get -n 100000 -q
-SET: 130890.05 requests per second, p50=0.231 msec                    
-GET: 134408.59 requests per second, p50=0.231 msec                    
-
-Run 10:
-$ redis-benchmark -t set,get -n 100000 -q
-SET: 141643.06 requests per second, p50=0.231 msec                    
-GET: 143061.52 requests per second, p50=0.223 msec                    
+SET: 165562.92 requests per second, p50=0.135 msec                    
+GET: 172413.80 requests per second, p50=0.135 msec                    
 ```
 
 ## Contributing
 
-Please see `CONTRIBUTING.md` for details.
-
-## License
-
-Please see `LICENSE.md` for details.
+Please see `

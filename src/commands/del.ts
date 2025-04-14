@@ -1,6 +1,6 @@
 import type { Socket } from "bun";
 import type { KeyValueStore } from "../store/store";
-import { formatError, formatInteger } from "./index";
+import { formatError, formatInteger } from "../protocol/resp";
 
 export function handleDel(
 	args: string[],

@@ -1,6 +1,6 @@
 import type { Socket } from "bun";
 import type { KeyValueStore } from "../store/store";
-import { formatBulkString, formatError } from "./index";
+import { formatBulkString, formatError } from "../protocol/resp";
 
 // Basic implementation to handle CONFIG GET for redis-benchmark
 // Doesn't actually get/set real config yet.
