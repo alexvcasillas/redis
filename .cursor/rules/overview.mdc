@@ -8,3 +8,5 @@ alwaysApply: false
 This project aims to replicate a Redis server in Bun.
 
 Out intentions are to build the most performant possible redis-like server implementation using Bun https://bun.sh
+
+Always check for Bun Docs https://bun.sh/docs

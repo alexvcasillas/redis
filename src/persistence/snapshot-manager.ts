@@ -40,7 +40,7 @@ export class SnapshotManager {
 
 		const parts = saveConfig.trim().split(/\s+/);
 		if (parts.length % 2 !== 0) {
-			console.error(
+			debug.warn(
 				"Invalid REDIS_SAVE format: Must be pairs of seconds and changes.",
 			);
 			return;
@@ -56,7 +56,7 @@ export class SnapshotManager {
 					typeof secondsStr === "undefined" ||
 					typeof changesStr === "undefined"
 				) {
-					console.error(
+					debug.error(
 						"Internal error parsing REDIS_SAVE: Unexpected undefined part.",
 					);
 					break;
@@ -106,42 +106,40 @@ export class SnapshotManager {
 		const now = Date.now();
 		const dirtyCount = this.store.getDirtyCount();
 
-		// If dirty count hasn't changed and we haven't hit any time thresholds, no need to check
-		if (dirtyCount === this.lastDirtyCount && now < this.nextCheckTime) return;
+		// Check if we need to save now based on rules
+		const elapsedSeconds = (now - this.lastSaveTime) / 1000;
 
-		this.lastDirtyCount = dirtyCount;
-
-		if (dirtyCount === 0) {
-			// No changes, schedule far future check
-			this.nextCheckTime = now + 60000; // Check again in 1 minute
-		} else {
-			// Find the earliest time we need to check based on current rules
-			let earliestCheck = Number.POSITIVE_INFINITY;
-			const elapsedSeconds = (now - this.lastSaveTime) / 1000;
-
-			for (const rule of this.rules) {
-				if (dirtyCount >= rule.changes) {
-					const timeUntilSave = Math.max(
-						0,
-						(rule.seconds - elapsedSeconds) * 1000,
-					);
-					earliestCheck = Math.min(earliestCheck, timeUntilSave);
-				}
-			}
-
-			if (earliestCheck === 0) {
+		for (const rule of this.rules) {
+			if (dirtyCount >= rule.changes && elapsedSeconds >= rule.seconds) {
 				// Need to save now
 				this.save();
 				return;
 			}
+		}
 
-			// Set next check time
-			this.nextCheckTime = now + Math.min(earliestCheck, 60000); // Cap at 1 minute
+		// If no immediate save needed, schedule next check
+		let earliestCheck = Number.POSITIVE_INFINITY;
+
+		for (const rule of this.rules) {
+			if (dirtyCount >= rule.changes) {
+				const timeUntilSave = Math.max(
+					0,
+					(rule.seconds - elapsedSeconds) * 1000,
+				);
+				earliestCheck = Math.min(earliestCheck, timeUntilSave);
+			}
+		}
+
+		// If no rules match current dirty count, check again in 1 minute
+		if (earliestCheck === Number.POSITIVE_INFINITY) {
+			earliestCheck = 60000;
 		}
 
 		// Schedule next check
-		const delay = Math.max(0, this.nextCheckTime - now);
-		this.timer = setTimeout(() => this.scheduleNextCheck(), delay);
+		const delay = Math.max(0, earliestCheck);
+		this.timer = setTimeout(() => {
+			this.scheduleNextCheck();
+		}, delay);
 	}
 
 	/**
@@ -278,6 +276,18 @@ export class SnapshotManager {
 		}
 		this.saveSnapshotToFile(this.store.getStore(), filePath);
 		this.lastSaveTime = Date.now();
+	}
+
+	/**
+	 * Manually trigger a check for snapshot conditions.
+	 * @internal Used for testing only
+	 */
+	public checkNow(): void {
+		if (!this.store || this.timer === null) {
+			debug.warn("Store not set or manager stopped, skipping snapshot check");
+			return;
+		}
+		this.scheduleNextCheck();
 	}
 }
 
