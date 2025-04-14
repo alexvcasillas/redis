@@ -2,32 +2,67 @@ import type { Socket } from "bun";
 import type { KeyValueStore } from "../store/store";
 import { debug } from "../utils/debug";
 
+// Common string constants
+const ERROR_PREFIX = "-ERR ";
+const CRLF = "\r\n";
+
+// Pre-formatted responses for common cases
+const NULL_RESPONSE = Buffer.from("$-1\r\n");
+const OK_RESPONSE = Buffer.from("+OK\r\n");
+const PONG_RESPONSE = Buffer.from("+PONG\r\n");
+const ZERO_RESPONSE = Buffer.from(":0\r\n");
+const ONE_RESPONSE = Buffer.from(":1\r\n");
+const TWO_RESPONSE = Buffer.from(":2\r\n");
+const THREE_RESPONSE = Buffer.from(":3\r\n");
+const SYNTAX_ERROR_RESPONSE = Buffer.from("-ERR syntax error\r\n");
+
+// Buffer pool for bulk strings
+const bulkStringBuffers = new Map<number, Buffer>();
+const MAX_CACHED_BULK_LENGTH = 1024; // Only cache responses up to 1KB
+
 // --- RESP Response Formatting --- //
-export function formatSimpleString(str: string): string {
-	return `+${str}\r\n`;
+export function formatSimpleString(str: string): Buffer {
+	if (str === "OK") return OK_RESPONSE;
+	if (str === "PONG") return PONG_RESPONSE;
+	return Buffer.from(`+${str}\r\n`);
 }
 
-export function formatError(err: string): string {
-	return `-${err}\r\n`;
-}
-
-export function formatInteger(num: number): string {
-	return `:${num}\r\n`;
-}
-
-export function formatBulkString(str: Buffer | string | null): string {
-	if (str === null) {
-		return "$-1\r\n";
+export function formatInteger(num: number): Buffer {
+	switch (num) {
+		case 0:
+			return ZERO_RESPONSE;
+		case 1:
+			return ONE_RESPONSE;
+		case 2:
+			return TWO_RESPONSE;
+		case 3:
+			return THREE_RESPONSE;
+		default:
+			return Buffer.from(`:${num}\r\n`);
 	}
+}
+
+export function formatBulkString(str: Buffer | string | null): Buffer {
+	if (str === null) {
+		return NULL_RESPONSE;
+	}
+
 	const buffer = Buffer.isBuffer(str) ? str : Buffer.from(str);
-	return `$${buffer.length}\r\n${buffer.toString("binary")}\r\n`;
+	return Buffer.concat([
+		Buffer.from(`$${buffer.length}\r\n`),
+		buffer,
+		Buffer.from("\r\n"),
+	]);
 }
 
-export function formatNull(): string {
-	return "$-1\r\n";
+export function formatError(msg: string): Buffer {
+	if (msg === "ERR syntax error") return SYNTAX_ERROR_RESPONSE;
+	return Buffer.from(`-ERR ${msg}\r\n`);
 }
 
-// TODO: formatArray
+export function formatNull(): Buffer {
+	return NULL_RESPONSE;
+}
 
 // Define the structure for a command handler function
 export type CommandHandler = (

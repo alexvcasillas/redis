@@ -78,46 +78,136 @@ $1
 
 ## Benchmarks
 
-Using `redis-benchmark` with this project in the production compilation environment (MacOS native):
+All benchmarks below represent averages from 10 runs each, using `redis-benchmark` with 100,000 operations per test.
+
+Bun Redis implementation (averaged over 10 runs):
+- SET: ~158,211.82 requests per second (p50=0.143-0.239 msec)
+- GET: ~157,587.95 requests per second (p50=0.143-0.255 msec)
+
+Official Redis server (averaged over 10 runs):
+- SET: ~163,013.53 requests per second (p50=0.127-0.231 msec)
+- GET: ~160,759.53 requests per second (p50=0.127-0.239 msec)
+
+Performance Analysis:
+- SET operations: Our implementation is ~2.95% slower than Redis
+- GET operations: Our implementation is ~1.97% slower than Redis
+
+Performance Summary:
+- Both SET and GET operations are within ~3% of Redis performance
+- Consistent performance across multiple runs
+- Latency (p50) is comparable between both implementations
+
+Note: Benchmark results can vary based on system load, hardware, and other environmental factors. These numbers represent performance on a MacOS system under specific test conditions. Each implementation's numbers were gathered from separate benchmark sessions.
+
+### Raw Benchmark Data
+
+#### Bun Redis Implementation
 
 ```bash
-redis-benchmark -t set,get -n 100000 -q
-SET: 153,264.93 requests per second, p50=0.159 msec                    
-GET: 161,190.10 requests per second, p50=0.143 msec                    
+Run 1:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 162337.66 requests per second, p50=0.151 msec                    
+GET: 175438.59 requests per second, p50=0.143 msec                    
+
+Run 2:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 157728.70 requests per second, p50=0.167 msec                    
+GET: 157977.88 requests per second, p50=0.159 msec                    
+
+Run 3:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 164203.61 requests per second, p50=0.151 msec                    
+GET: 172117.05 requests per second, p50=0.143 msec                    
+
+Run 4:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 168634.06 requests per second, p50=0.151 msec                    
+GET: 170940.17 requests per second, p50=0.143 msec                    
+
+Run 5:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 168350.17 requests per second, p50=0.143 msec                    
+GET: 149031.30 requests per second, p50=0.175 msec                    
+
+Run 6:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 147058.83 requests per second, p50=0.199 msec                    
+GET: 131926.12 requests per second, p50=0.175 msec                    
+
+Run 7:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 138312.59 requests per second, p50=0.239 msec                    
+GET: 122100.12 requests per second, p50=0.255 msec                    
+
+Run 8:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 144092.22 requests per second, p50=0.231 msec                    
+GET: 169204.73 requests per second, p50=0.143 msec                    
+
+Run 9:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 165562.92 requests per second, p50=0.159 msec                    
+GET: 166112.95 requests per second, p50=0.143 msec                    
+
+Run 10:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 165837.48 requests per second, p50=0.151 msec                    
+GET: 161030.59 requests per second, p50=0.151 msec                    
 ```
 
-Using `redis-benchmark` with this project against the official Redis server:
+#### Official Redis Server
 
 ```bash
-redis-benchmark -t set,get -n 100000 -q
-SET: 161,343.75 requests per second, p50=0.143 msec                    
-GET: 173,622.50 requests per second, p50=0.143 msec
+Run 1:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 166112.95 requests per second, p50=0.135 msec                    
+GET: 174520.06 requests per second, p50=0.135 msec                    
+
+Run 2:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 182481.77 requests per second, p50=0.127 msec                    
+GET: 173611.12 requests per second, p50=0.135 msec                    
+
+Run 3:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 170940.17 requests per second, p50=0.135 msec                    
+GET: 177619.89 requests per second, p50=0.135 msec                    
+
+Run 4:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 177935.95 requests per second, p50=0.135 msec                    
+GET: 185185.17 requests per second, p50=0.127 msec                    
+
+Run 5:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 176366.86 requests per second, p50=0.135 msec                    
+GET: 177619.89 requests per second, p50=0.135 msec                    
+
+Run 6:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 180831.83 requests per second, p50=0.127 msec                    
+GET: 156006.25 requests per second, p50=0.143 msec                    
+
+Run 7:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 171526.58 requests per second, p50=0.135 msec                    
+GET: 164203.61 requests per second, p50=0.143 msec                    
+
+Run 8:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 131406.05 requests per second, p50=0.231 msec                    
+GET: 121359.23 requests per second, p50=0.239 msec                    
+
+Run 9:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 130890.05 requests per second, p50=0.231 msec                    
+GET: 134408.59 requests per second, p50=0.231 msec                    
+
+Run 10:
+$ redis-benchmark -t set,get -n 100000 -q
+SET: 141643.06 requests per second, p50=0.231 msec                    
+GET: 143061.52 requests per second, p50=0.223 msec                    
 ```
-
-Bun Redis implementation:
-- SET: ~153,264.93 requests per second
-- GET: ~161,190.10 requests per second
-
-Official Redis:
-- SET: ~161,343.75 requests per second
-- GET: ~173,622.50 requests per second
-
-For SET operations:
-- Difference: ~161,343.75 - ~153,264.93 = ~8,078.82 req/s
-- Percentage faster: (~8,078.82 / ~153,264.93) × 100 ≈ ~5.27%
-
-For GET operations:
-- Difference: ~173,622.50 - ~161,190.10 = ~12,432.40 req/s
-- Percentage faster: (~12,432.40 / ~161,190.10) × 100 ≈ ~7.16%
-
-The official Redis server is:
-- Approximately ~5.27% faster for SET operations
-- Approximately ~7.16% faster for GET operations
-
-Recent Improvements:
-- GET operations improved by ~2.86% through TTL optimization
-- SET operations improved by ~2.72% through storage optimization
-- Overall performance gap with Redis reduced from ~10.80% to ~7.16%
 
 ## Contributing
 

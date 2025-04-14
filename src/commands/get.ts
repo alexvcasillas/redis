@@ -2,22 +2,26 @@ import type { Socket } from "bun";
 import type { KeyValueStore } from "../store/store";
 import { formatBulkString, formatError, formatNull } from "./index";
 
+// Pre-format common error for GET
+const GET_WRONG_ARGS = formatError(
+	"ERR wrong number of arguments for 'get' command",
+);
+const GET_SYNTAX_ERROR = formatError("ERR syntax error");
+
 export function handleGet(
 	args: string[],
 	socket: Socket,
 	store: KeyValueStore,
 ): void {
 	if (args.length !== 1) {
-		socket.write(
-			formatError("ERR wrong number of arguments for 'get' command"),
-		);
+		socket.write(GET_WRONG_ARGS);
 		return;
 	}
 
 	const key = args[0];
 
 	if (key === undefined) {
-		socket.write(formatError("ERR syntax error"));
+		socket.write(GET_SYNTAX_ERROR);
 		return;
 	}
 
