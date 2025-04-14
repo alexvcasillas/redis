@@ -1,6 +1,6 @@
 import * as path from "node:path"; // For path manipulation
 import { store } from "./store/store";
-import { SnapshotManager } from "./persistence/snapshot-manager";
+import { snapshotManager } from "./persistence/snapshot-manager";
 import {
 	handleSocketOpen,
 	handleSocketData,
@@ -10,12 +10,8 @@ import {
 } from "./socket/handlers";
 import { debug } from "./utils/debug";
 
-// Initialize snapshot manager with environment variables or defaults
-const snapshotManager = new SnapshotManager(
-	process.env.REDIS_SAVE ?? "900 1 300 10",
-	process.env.REDIS_DBFILENAME,
-	process.env.REDIS_DIR,
-);
+// Set the store in the snapshot manager
+snapshotManager.setStore(store);
 
 // Load snapshot *before* listening
 snapshotManager.loadInitialSnapshot();

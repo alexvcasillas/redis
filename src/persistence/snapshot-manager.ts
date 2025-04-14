@@ -1,7 +1,7 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
-import { store } from "../store/store";
-import { existsSync } from "node:fs";
 import { debug } from "../utils/debug";
+import type { KeyValueStore } from "../store/store";
 
 interface SaveRule {
 	seconds: number;
@@ -15,6 +15,7 @@ export class SnapshotManager {
 	private lastSaveTime = Date.now();
 	private lastDirtyCount = 0;
 	private snapshotFilePath: string;
+	private store: KeyValueStore | null = null;
 
 	constructor(
 		saveConfig: string,
@@ -27,6 +28,10 @@ export class SnapshotManager {
 		debug.log(`Snapshot file path configured to: ${this.snapshotFilePath}`);
 
 		this.parseRules(saveConfig);
+	}
+
+	public setStore(store: KeyValueStore): void {
+		this.store = store;
 		this.scheduleNextCheck();
 	}
 
@@ -86,6 +91,11 @@ export class SnapshotManager {
 	}
 
 	private scheduleNextCheck() {
+		if (!this.store) {
+			debug.warn("Store not set, skipping snapshot check scheduling");
+			return;
+		}
+
 		if (this.timer) {
 			clearTimeout(this.timer);
 			this.timer = null;
@@ -94,7 +104,7 @@ export class SnapshotManager {
 		if (this.rules.length === 0) return;
 
 		const now = Date.now();
-		const dirtyCount = store.getDirtyCount();
+		const dirtyCount = this.store.getDirtyCount();
 
 		// If dirty count hasn't changed and we haven't hit any time thresholds, no need to check
 		if (dirtyCount === this.lastDirtyCount && now < this.nextCheckTime) return;
@@ -134,9 +144,86 @@ export class SnapshotManager {
 		this.timer = setTimeout(() => this.scheduleNextCheck(), delay);
 	}
 
-	private save() {
+	/**
+	 * Saves the current state of the store to a snapshot file.
+	 * Uses JSON format with Buffers encoded as base64.
+	 */
+	private saveSnapshotToFile(
+		store: Map<string, Buffer>,
+		filePath: string,
+	): void {
 		try {
-			store.saveSnapshot(this.snapshotFilePath);
+			debug.log(`Saving snapshot to ${filePath}...`);
+			const snapshotData: Record<string, string> = {};
+
+			for (const [key, value] of store.entries()) {
+				snapshotData[key] = value.toString("base64");
+			}
+
+			const dir = path.dirname(filePath);
+			if (!existsSync(dir)) {
+				mkdirSync(dir, { recursive: true });
+				debug.log(`Created directory ${dir}`);
+			}
+
+			writeFileSync(filePath, JSON.stringify(snapshotData));
+			debug.log(
+				`Snapshot saved to ${filePath} (${store.size} keys, ${JSON.stringify(snapshotData).length} bytes)`,
+			);
+		} catch (error) {
+			debug.error(`Error saving snapshot to ${filePath}:`, error);
+			throw error; // Propagate error to caller
+		}
+	}
+
+	/**
+	 * Loads the store state from a snapshot file.
+	 * Returns a new Map with the loaded data.
+	 */
+	private loadSnapshotFromFile(filePath: string): Map<string, Buffer> {
+		try {
+			if (!existsSync(filePath)) {
+				debug.log(`Snapshot file ${filePath} not found, starting fresh.`);
+				return new Map<string, Buffer>();
+			}
+
+			debug.log(`Loading snapshot from ${filePath}...`);
+			const fileContent = readFileSync(filePath, "utf-8");
+
+			if (!fileContent) {
+				debug.log(`Snapshot file ${filePath} is empty, starting fresh.`);
+				return new Map<string, Buffer>();
+			}
+
+			const snapshotData: Record<string, string> = JSON.parse(fileContent);
+			const loadedStore = new Map<string, Buffer>();
+
+			for (const [key, base64Value] of Object.entries(snapshotData)) {
+				loadedStore.set(key, Buffer.from(base64Value, "base64"));
+			}
+
+			debug.log(
+				`Snapshot loaded from ${filePath} (${loadedStore.size} keys, ${JSON.stringify(snapshotData).length} bytes)`,
+			);
+
+			return loadedStore;
+		} catch (error) {
+			debug.error(`Error loading snapshot from ${filePath}:`, error);
+			debug.warn(
+				"Starting fresh due to snapshot load error. Data may be lost.",
+			);
+			return new Map<string, Buffer>();
+		}
+	}
+
+	private save() {
+		if (!this.store) {
+			debug.warn("Store not set, skipping snapshot save");
+			return;
+		}
+
+		try {
+			this.saveSnapshotToFile(this.store.getStore(), this.snapshotFilePath);
 			this.lastSaveTime = Date.now();
 			this.lastDirtyCount = 0;
 			this.scheduleNextCheck();
@@ -146,6 +233,10 @@ export class SnapshotManager {
 	}
 
 	public start() {
+		if (!this.store) {
+			debug.warn("Store not set, cannot start snapshot manager");
+			return;
+		}
 		this.scheduleNextCheck();
 	}
 
@@ -160,13 +251,39 @@ export class SnapshotManager {
 		return this.snapshotFilePath;
 	}
 
+	public getLastSaveTime(): Date | null {
+		return new Date(this.lastSaveTime);
+	}
+
 	public loadInitialSnapshot(): void {
+		if (!this.store) {
+			debug.warn("Store not set, skipping initial snapshot load");
+			return;
+		}
+
 		try {
-			store.loadSnapshot(this.snapshotFilePath);
+			const loadedStore = this.loadSnapshotFromFile(this.snapshotFilePath);
+			this.store.loadFromSnapshot(loadedStore);
 		} catch (loadError) {
 			debug.error("Critical error during initial snapshot load:", loadError);
 			// Decide if you want to exit or continue with an empty store
 			// process.exit(1);
 		}
 	}
+
+	public saveSnapshot(filePath: string): void {
+		if (!this.store) {
+			debug.warn("Store not set, skipping snapshot save");
+			return;
+		}
+		this.saveSnapshotToFile(this.store.getStore(), filePath);
+		this.lastSaveTime = Date.now();
+	}
 }
+
+// Export a singleton instance
+export const snapshotManager = new SnapshotManager(
+	process.env.REDIS_SAVE ?? "900 1 300 10",
+	process.env.REDIS_DBFILENAME,
+	process.env.REDIS_DIR,
+);

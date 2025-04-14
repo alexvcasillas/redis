@@ -37,4 +37,5 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 bun-redis-server
 
 # Ignore data dumps
+data
 data/**/*

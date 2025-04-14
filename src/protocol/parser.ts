@@ -66,9 +66,6 @@ export class RESPParser {
 		// Check if we need to grow the buffer
 		const requiredSize = this.bufferSize + data.length;
 		if (this.buffer.length < requiredSize) {
-			debug.log(
-				`Growing buffer from ${this.buffer.length} to ${Math.max(requiredSize * 2, 1024)} bytes`,
-			);
 			// Allocate new buffer with some extra space
 			const newBuffer = bufferPool.acquire(Math.max(requiredSize * 2, 1024));
 			this.buffer.copy(newBuffer, 0, this.offset, this.bufferSize);
@@ -78,7 +75,6 @@ export class RESPParser {
 			this.bufferSize -= this.offset;
 			this.offset = 0;
 		} else if (this.offset > 0) {
-			debug.log(`Compacting buffer, removing ${this.offset} bytes`);
 			// Compact buffer if needed
 			this.buffer.copy(this.buffer, 0, this.offset, this.bufferSize);
 			this.bufferSize -= this.offset;
@@ -88,9 +84,6 @@ export class RESPParser {
 		// Append new data
 		data.copy(this.buffer, this.bufferSize);
 		this.bufferSize += data.length;
-		debug.log(
-			`Appended ${data.length} bytes to buffer, total size: ${this.bufferSize}`,
-		);
 
 		while (this.offset < this.bufferSize) {
 			const initialOffset = this.offset;
@@ -98,7 +91,6 @@ export class RESPParser {
 				const value = this._parseValue();
 
 				if (value === undefined) {
-					debug.log("Need more data to complete parsing");
 					break;
 				}
 
@@ -106,19 +98,20 @@ export class RESPParser {
 					// Convert array items to strings efficiently
 					const command = this._convertArrayToStrings(value);
 					if (command.length > 0) {
-						debug.log("Parsed command:", command);
 						this.onCommand(command);
 					}
 				} else {
-					debug.warn("Parsed non-array value at top level:", value);
+					// Handle single values by wrapping them in an array
+					const command = this._convertValueToString(value);
+					if (command !== null) {
+						this.onCommand([command]);
+					}
 				}
 
 				if (this.offset === initialOffset) {
-					debug.error("Parsing stalled. Offset did not advance.");
 					break;
 				}
 			} catch (e) {
-				debug.error("RESP Parsing Error:", e);
 				this.bufferSize = 0;
 				this.offset = 0;
 				break;
@@ -127,24 +120,34 @@ export class RESPParser {
 
 		// If we've processed everything, reset the buffer
 		if (this.offset >= this.bufferSize) {
-			debug.log("Buffer fully processed, resetting");
 			this.bufferSize = 0;
 			this.offset = 0;
 		}
 	}
 
+	private _convertValueToString(value: RESPValue): string | null {
+		if (Buffer.isBuffer(value)) {
+			return value.toString("utf8");
+		}
+		if (typeof value === "string") {
+			return value;
+		}
+		if (typeof value === "number") {
+			return value.toString();
+		}
+		if (value === null) {
+			return null;
+		}
+		debug.error("Malformed value: cannot convert to string", value);
+		return null;
+	}
+
 	private _convertArrayToStrings(value: RESPValue[]): string[] {
 		const result: string[] = [];
 		for (const item of value) {
-			if (Buffer.isBuffer(item)) {
-				result.push(item.toString("utf8")); // More efficient than "utf-8"
-			} else if (typeof item === "string") {
-				result.push(item);
-			} else {
-				debug.error(
-					"Malformed command: array contains non-string/buffer element",
-					item,
-				);
+			const converted = this._convertValueToString(item);
+			if (converted !== null) {
+				result.push(converted);
 			}
 		}
 		return result;
