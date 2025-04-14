@@ -1,5 +1,6 @@
 import type { Socket } from "bun";
 import type { KeyValueStore } from "../store/store";
+import { debug } from "../utils/debug";
 
 // --- RESP Response Formatting --- //
 export function formatSimpleString(str: string): string {
@@ -57,5 +58,5 @@ registerCommand("GET", handleGet);
 registerCommand("DEL", handleDel);
 registerCommand("CONFIG", handleConfig);
 
-console.log("Command registry initialized.");
-console.log("Registered commands:", Array.from(commandMap.keys()));
+debug.log("Command registry initialized.");
+debug.log("Registered commands:", Array.from(commandMap.keys()));

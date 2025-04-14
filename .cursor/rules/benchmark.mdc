@@ -1,0 +1,17 @@
+---
+description: 
+globs: *.ts
+alwaysApply: false
+---
+# Benchmark
+
+In order to properly benchmark our implementation, we need to follow these steps:
+
+1. Compile the server with `bun run build`.
+2. Run the compilation with `./bun-redis-server`.
+3. Run `redis-benchmark -t set,get -n 100000 -q`.
+4. Note the output-
+5. Check the [README.md](mdc:README.md) in the Benchmark section.
+6. Compare the values.
+7. If the performance has improved, override the results showcase.
+8. If the performance has worsen, notify that we have made things worse and write an action plan to improve or revert the changes that we made to restore the performance losses.

@@ -1,11 +1,55 @@
 export type RESPValue = string | number | Buffer | null | RESPValue[];
+import { debug } from "../utils/debug";
 
 // Helper to find CRLF
 const CRLF = Buffer.from("\r\n");
+const CRLF_LENGTH = CRLF.length;
+
+// Buffer pool for reuse
+class BufferPool {
+	private pool: Buffer[] = [];
+	private readonly maxSize: number;
+	private readonly initialSize: number;
+
+	constructor(maxSize = 10, initialSize = 1024) {
+		this.maxSize = maxSize;
+		this.initialSize = initialSize;
+	}
+
+	acquire(minSize: number): Buffer {
+		const idealSize = Math.max(minSize, this.initialSize);
+
+		// Try to find a buffer of suitable size
+		for (let i = 0; i < this.pool.length; i++) {
+			const buffer = this.pool[i];
+			if (buffer && buffer.length >= minSize) {
+				const result = this.pool.splice(i, 1)[0];
+				if (!result) {
+					// This should never happen due to the check above, but satisfy the linter
+					return Buffer.allocUnsafe(idealSize);
+				}
+				return result;
+			}
+		}
+
+		// Create new buffer if none found
+		return Buffer.allocUnsafe(idealSize);
+	}
+
+	release(buffer: Buffer): void {
+		if (this.pool.length < this.maxSize) {
+			this.pool.push(buffer);
+		}
+	}
+}
+
+// Singleton buffer pool
+const bufferPool = new BufferPool();
 
 export class RESPParser {
-	private buffer: Buffer = Buffer.alloc(0);
-	private offset = 0; // Keep track of the current position in the buffer
+	private buffer: Buffer = bufferPool.acquire(1024);
+	private offset = 0;
+	private bufferSize = 0;
 
 	// Callback to be called when a full command (array) is parsed
 	onCommand: (command: string[]) => void;
@@ -19,98 +63,122 @@ export class RESPParser {
 	 * @param data The incoming data chunk.
 	 */
 	parse(data: Buffer) {
-		// Append new data and reset offset if buffer was empty
-		if (this.buffer.length === 0) {
-			this.buffer = data;
+		// Check if we need to grow the buffer
+		const requiredSize = this.bufferSize + data.length;
+		if (this.buffer.length < requiredSize) {
+			debug.log(
+				`Growing buffer from ${this.buffer.length} to ${Math.max(requiredSize * 2, 1024)} bytes`,
+			);
+			// Allocate new buffer with some extra space
+			const newBuffer = bufferPool.acquire(Math.max(requiredSize * 2, 1024));
+			this.buffer.copy(newBuffer, 0, this.offset, this.bufferSize);
+			const oldBuffer = this.buffer;
+			this.buffer = newBuffer;
+			bufferPool.release(oldBuffer);
+			this.bufferSize -= this.offset;
 			this.offset = 0;
-		} else {
-			// If there's remaining data, create a new buffer consolidating the old fragment and new data
-			const remaining = this.buffer.subarray(this.offset);
-			this.buffer = Buffer.concat([remaining, data]);
-			this.offset = 0; // Reset offset for the new concatenated buffer
+		} else if (this.offset > 0) {
+			debug.log(`Compacting buffer, removing ${this.offset} bytes`);
+			// Compact buffer if needed
+			this.buffer.copy(this.buffer, 0, this.offset, this.bufferSize);
+			this.bufferSize -= this.offset;
+			this.offset = 0;
 		}
 
-		// console.log(`Parser buffer (${this.buffer.length}, offset ${this.offset}): ${this.buffer.toString('utf-8', this.offset).replace(/\r\n/g, '\\r\\n')}`); // Debug logging
+		// Append new data
+		data.copy(this.buffer, this.bufferSize);
+		this.bufferSize += data.length;
+		debug.log(
+			`Appended ${data.length} bytes to buffer, total size: ${this.bufferSize}`,
+		);
 
-		while (this.offset < this.buffer.length) {
+		while (this.offset < this.bufferSize) {
 			const initialOffset = this.offset;
 			try {
 				const value = this._parseValue();
 
-				// If value is undefined, it means we need more data
 				if (value === undefined) {
-					// console.log("Need more data...");
-					break; // Exit the loop and wait for more data
+					debug.log("Need more data to complete parsing");
+					break;
 				}
 
-				// If we successfully parsed an array (top-level command)
 				if (Array.isArray(value)) {
-					// console.log("Parsed command array:", value);
-					// Validate command format (array of strings/buffers) and convert to string[]
-					const command = value
-						.map((item) => {
-							if (Buffer.isBuffer(item)) {
-								return item.toString("utf-8");
-							}
-							if (typeof item === "string") {
-								return item; // Should not happen with RESP arrays from clients normally, but handle it
-							}
-							// Malformed command - non-string/buffer element
-							// For simplicity, we might throw or send an error response later
-							console.error(
-								"Malformed command: array contains non-string/buffer element",
-								item,
-							);
-							return ""; // Or throw an error
-						})
-						.filter((s) => s !== ""); // Filter out errors for now
-
+					// Convert array items to strings efficiently
+					const command = this._convertArrayToStrings(value);
 					if (command.length > 0) {
+						debug.log("Parsed command:", command);
 						this.onCommand(command);
 					}
 				} else {
-					// Parsed a value, but it wasn't a top-level array (command).
-					// This shouldn't happen for client commands according to Redis spec.
-					// We could log this as an error or ignore it.
-					console.warn("Parsed non-array value at top level:", value);
+					debug.warn("Parsed non-array value at top level:", value);
 				}
 
-				// If offset hasn't moved, it means parsing finished but didn't consume data (error state)
 				if (this.offset === initialOffset) {
-					console.error("Parsing stalled. Offset did not advance.");
-					// Potentially break or reset state to avoid infinite loops
+					debug.error("Parsing stalled. Offset did not advance.");
 					break;
 				}
 			} catch (e) {
-				// Handle parsing errors (e.g., invalid format)
-				console.error("RESP Parsing Error:", e);
-				// TODO: Send error response to client? Close connection?
-				// For now, we might just reset the buffer to avoid processing corrupted data.
-				this.buffer = Buffer.alloc(0);
+				debug.error("RESP Parsing Error:", e);
+				this.bufferSize = 0;
 				this.offset = 0;
-				break; // Exit loop on error
+				break;
 			}
 		}
 
-		// If we've processed the entire buffer, clear it
-		if (this.offset >= this.buffer.length) {
-			this.buffer = Buffer.alloc(0);
+		// If we've processed everything, reset the buffer
+		if (this.offset >= this.bufferSize) {
+			debug.log("Buffer fully processed, resetting");
+			this.bufferSize = 0;
 			this.offset = 0;
 		}
 	}
 
-	private _readLine(): Buffer | null {
-		const crlfIndex = this.buffer.indexOf(CRLF, this.offset);
-		if (crlfIndex === -1) {
-			return null; // Not enough data for a complete line
+	private _convertArrayToStrings(value: RESPValue[]): string[] {
+		const result: string[] = [];
+		for (const item of value) {
+			if (Buffer.isBuffer(item)) {
+				result.push(item.toString("utf8")); // More efficient than "utf-8"
+			} else if (typeof item === "string") {
+				result.push(item);
+			} else {
+				debug.error(
+					"Malformed command: array contains non-string/buffer element",
+					item,
+				);
+			}
 		}
-		const line = this.buffer.subarray(this.offset, crlfIndex);
-		this.offset = crlfIndex + CRLF.length; // Move offset past CRLF
-		return line;
+		return result;
+	}
+
+	private _readLine(): Buffer | null {
+		// Optimized CRLF search for small buffers
+		if (this.bufferSize - this.offset < 64) {
+			const crlfIndex = this.buffer.indexOf(CRLF, this.offset);
+			if (crlfIndex === -1) {
+				return null;
+			}
+			const line = this.buffer.subarray(this.offset, crlfIndex);
+			this.offset = crlfIndex + CRLF_LENGTH;
+			return line;
+		}
+
+		// For larger buffers, use a more efficient search
+		let i = this.offset;
+		const end = this.bufferSize - 1;
+		while (i < end) {
+			if (this.buffer[i] === 13 && this.buffer[i + 1] === 10) {
+				// \r\n
+				const line = this.buffer.subarray(this.offset, i);
+				this.offset = i + CRLF_LENGTH;
+				return line;
+			}
+			i++;
+		}
+		return null;
 	}
 
 	private _parseValue(): RESPValue | undefined {
-		if (this.offset >= this.buffer.length) {
+		if (this.offset >= this.bufferSize) {
 			return undefined; // Need more data
 		}
 
@@ -223,7 +291,7 @@ export class RESPParser {
 		}
 
 		const totalLength = length + CRLF.length;
-		if (this.offset + totalLength > this.buffer.length) {
+		if (this.offset + totalLength > this.bufferSize) {
 			// Not enough data for the bulk string content + CRLF
 			// Reset offset to before the length line was read
 			this.offset = initialOffsetForLength;
@@ -283,6 +351,8 @@ export class RESPParser {
 		return array;
 	}
 
-	// TODO: Add private methods for parsing different RESP types
-	// e.g., parseSimpleString, parseError, parseInteger, parseBulkString, parseArray
+	dispose() {
+		debug.log("Disposing parser and releasing buffer");
+		bufferPool.release(this.buffer);
+	}
 }

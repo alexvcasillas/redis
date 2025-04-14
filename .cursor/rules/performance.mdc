@@ -1,0 +1,10 @@
+---
+description: 
+globs: *.ts
+alwaysApply: false
+---
+# Performance
+
+This project aims to try to replicate the performance of a real world Redis server.
+
+Even though a real Redis server is build with C, and there's no match against a C program in terms of speed and performance, we should try aiming to match the real Redis server performance by using the best practices in terms of performance.

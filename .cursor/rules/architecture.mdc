@@ -1,0 +1,21 @@
+---
+description: 
+globs: *.ts
+alwaysApply: false
+---
+# Architecture
+
+This project is created using Bun https://bun.sh
+
+## Project structure
+
+- `commands`: in this folder we will store all of the supported redis-like commands.
+- `persistence`: in this folder we will tore all of the persistence related redis-like implementations.
+- `protocol`: in this folder we will store all of the redis-like protocol related things, like for instance, our RESP parser.
+- `store`: in this folder we will store all of the redis-like store implementations, for instance, our key-value store.
+- `utils`: in this folder we will store everything that's related to utilities and libraries that we might need to implement in order to help us build our server.
+- `test`: in this folder we will create all of the necessary tests related to any of implementations of the redis-like server. Everything should be carefully tested and make sure that covers at least 99% of the cases.
+
+## Code style
+
+This project uses Biome.js https://biomejs.dev/ as the linter and the code formatter.

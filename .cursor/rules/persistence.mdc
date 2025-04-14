@@ -1,0 +1,8 @@
+---
+description: 
+globs: *.ts
+alwaysApply: false
+---
+# Persistence
+
+When it comes to persistence in our redis-like implementation we need to follow the Redis documentation: https://redis.io/docs/latest/commands/ttl/

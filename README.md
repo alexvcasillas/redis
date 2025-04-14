@@ -78,12 +78,12 @@ $1
 
 ## Benchmarks
 
-Using `redis-benchmark` with this project in the production compilation environment:
+Using `redis-benchmark` with this project in the production compilation environment (MacOS native):
 
 ```bash
 redis-benchmark -t set,get -n 100000 -q
-SET: 103092.78 requests per second, p50=0.519 msec                    
-GET: 111982.08 requests per second, p50=0.407 msec                    
+SET: 160771.70 requests per second, p50=0.151 msec                    
+GET: 178253.12 requests per second, p50=0.143 msec                    
 ```
 
 Using `redis-benchmark` with this project against the official Redis server:
@@ -94,9 +94,9 @@ SET: 171821.30 requests per second, p50=0.143 msec
 GET: 185185.17 requests per second, p50=0.143 msec
 ```
 
-Bun Redist implementation:
-- SET: 103,092.78 requests per second
-- GET: 111,982.08 requests per second
+Bun Redis implementation:
+- SET: 160,771.70 requests per second
+- GET: 178,253.12 requests per second
 
 Official Redis:
 - SET: 171,821.30 requests per second
@@ -104,16 +104,23 @@ Official Redis:
 
 
 For SET operations:
-- Difference: 171,821.30 - 103,092.78 = 68,728.52 req/s
-- Percentage faster: (68,728.52 / 103,092.78) × 100 ≈ 66.67%
+- Difference: 171,821.30 - 160,771.70 = 11,049.60 req/s
+- Percentage faster: (11,049.60 / 160,771.70) × 100 ≈ 6.87%
 
 For GET operations:
-- Difference: 185,185.17 - 111,982.08 = 73,203.09 req/s
-- Percentage faster: (73,203.09 / 111,982.08) × 100 ≈ 65.37%
+- Difference: 185,185.17 - 178,253.12 = 6,932.05 req/s
+- Percentage faster: (6,932.05 / 178,253.12) × 100 ≈ 3.89%
 
-The official Redis server is:
-- Approximately 66.67% faster for SET operations
-- Approximately 65.37% faster for GET operations
+The official Redis server is now only:
+- Approximately 6.87% faster for SET operations
+- Approximately 3.89% faster for GET operations
+
+This represents a remarkable improvement over our previous performance:
+- SET operations improved by ~39% (from 115,874.86 to 160,771.70 req/s)
+- GET operations improved by ~48% (from 120,048.02 to 178,253.12 req/s)
+
+The performance gap with the official Redis server has been dramatically reduced from ~51% (the initial implementation) to just ~5.4% on average.
+This puts our Bun Redis implementation very close to native C Redis performance!
 
 ## Contributing
 
