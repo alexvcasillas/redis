@@ -1,15 +1,15 @@
 import {
+	afterEach,
+	beforeEach,
 	describe,
 	expect,
-	test,
-	beforeEach,
-	afterEach,
 	setSystemTime,
+	test,
 } from "bun:test";
-import { SnapshotManager } from "../../src/persistence/snapshot-manager";
+import { existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { unlinkSync, existsSync, mkdirSync } from "node:fs";
+import { SnapshotManager } from "../../src/persistence/snapshot-manager";
 import { KeyValueStore } from "../../src/store/store";
 
 describe("SnapshotManager", () => {

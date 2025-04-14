@@ -1,10 +1,10 @@
 import type { Socket } from "bun";
-import type { KeyValueStore } from "../store/store";
 import {
 	formatBulkString,
 	formatError,
 	formatSimpleString,
 } from "../protocol/resp";
+import type { KeyValueStore } from "../store/store";
 
 export function handlePing(
 	args: string[],

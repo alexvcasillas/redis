@@ -74,9 +74,8 @@ export class TTLManager {
 			return;
 		}
 
-		this.ttlStore.set(key, {
-			expiresAt: Date.now() + milliseconds,
-		});
+		const expiresAt = Date.now() + milliseconds;
+		this.ttlStore.set(key, { expiresAt });
 
 		// Set new timeout
 		const timeout = setTimeout(() => {
@@ -89,7 +88,7 @@ export class TTLManager {
 
 	/**
 	 * Gets the remaining TTL for a key in seconds.
-	 * @returns TTL in seconds, or -1 if no TTL set
+	 * @returns TTL in seconds, or -1 if no TTL set or key has expired
 	 */
 	ttl(key: string): number {
 		const ttlEntry = this.ttlStore.get(key);
@@ -99,9 +98,8 @@ export class TTLManager {
 
 		const remainingMs = ttlEntry.expiresAt - Date.now();
 		if (remainingMs <= 0) {
-			this.ttlStore.delete(key);
-			this.onDelete(key);
-			return -2;
+			this.delete(key);
+			return -1;
 		}
 
 		return Math.ceil(remainingMs / 1000);
@@ -119,9 +117,8 @@ export class TTLManager {
 
 		const remainingMs = ttlEntry.expiresAt - Date.now();
 		if (remainingMs <= 0) {
-			this.ttlStore.delete(key);
-			this.onDelete(key);
-			return -2;
+			this.delete(key);
+			return -1;
 		}
 
 		return Math.max(0, remainingMs);
@@ -162,6 +159,7 @@ export class TTLManager {
 		}
 		const expired = Date.now() >= ttlEntry.expiresAt;
 		if (expired) {
+			this.delete(key);
 			debug.log(`Key ${key} has expired`);
 		}
 		return expired;

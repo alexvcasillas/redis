@@ -1,6 +1,6 @@
 import { snapshotManager } from "../persistence/snapshot-manager";
-import { TTLManager } from "./ttl";
 import { debug } from "../utils/debug";
+import { TTLManager } from "./ttl";
 
 // Threshold for when to perform lazy cleanup
 const LAZY_CLEANUP_THRESHOLD = 1000;
@@ -24,6 +24,7 @@ export class KeyValueStore {
 		this.ttlManager = new TTLManager({
 			onDelete: (key) => this.delete(key),
 		});
+		snapshotManager.setStore(this);
 		debug.log(
 			"In-memory store initialized with separate TTL and permanent stores.",
 		);
@@ -134,8 +135,15 @@ export class KeyValueStore {
 	 * @returns true if the TTL was set, false if the key doesn't exist
 	 */
 	pexpire(key: string, milliseconds: number): boolean {
-		if (!this.ttlStore.has(key)) {
+		const value = this.get(key);
+		if (!value) {
 			return false;
+		}
+
+		// Move to TTL store if in permanent store
+		if (this.permanentStore.has(key)) {
+			this.permanentStore.delete(key);
+			this.ttlStore.set(key, value);
 		}
 
 		this.ttlManager.pexpire(key, milliseconds);
@@ -152,6 +160,11 @@ export class KeyValueStore {
 	 *   Otherwise, TTL in seconds
 	 */
 	ttl(key: string): number {
+		// Check if key exists in permanent store (no TTL)
+		if (this.permanentStore.has(key)) {
+			return -1;
+		}
+		// Check if key exists in TTL store
 		if (!this.ttlStore.has(key)) {
 			return -2;
 		}
@@ -167,6 +180,11 @@ export class KeyValueStore {
 	 *   Otherwise, TTL in milliseconds
 	 */
 	pttl(key: string): number {
+		// Check if key exists in permanent store (no TTL)
+		if (this.permanentStore.has(key)) {
+			return -1;
+		}
+		// Check if key exists in TTL store
 		if (!this.ttlStore.has(key)) {
 			return -2;
 		}
@@ -213,7 +231,14 @@ export class KeyValueStore {
 		return this.dirty;
 	}
 
+	/**
+	 * Gets the last save time.
+	 * Returns null if there are dirty changes or if no save has occurred yet.
+	 */
 	getLastSaveTime(): Date | null {
+		if (this.dirty > 0 || !snapshotManager.getLastSaveTime()) {
+			return null;
+		}
 		return snapshotManager.getLastSaveTime();
 	}
 
@@ -238,8 +263,8 @@ export class KeyValueStore {
 	 * @internal Used by SnapshotManager
 	 */
 	loadFromSnapshot(loadedStore: Map<string, Buffer>): void {
-		this.permanentStore = new Map<string, Buffer>();
-		this.ttlStore = new Map<string, Buffer>();
+		this.permanentStore.clear();
+		this.ttlStore.clear();
 
 		// All keys from snapshot go to permanent store initially
 		for (const [key, value] of loadedStore) {
@@ -259,6 +284,9 @@ export class KeyValueStore {
 	saveSnapshot(filePath: string): void {
 		// Clean up expired keys before saving
 		this.cleanupExpired();
+
+		// Save snapshot using the snapshot manager
+		snapshotManager.setStore(this);
 		snapshotManager.saveSnapshot(filePath);
 		this.dirty = 0;
 	}
@@ -268,9 +296,18 @@ export class KeyValueStore {
 	 * @param filePath The path to load the snapshot from
 	 */
 	loadSnapshot(filePath: string): void {
-		snapshotManager.loadInitialSnapshot();
+		// Clean up current state
+		this.permanentStore.clear();
+		this.ttlStore.clear();
+		this.ttlManager.clear();
 		this.dirty = 0;
 		this.expiredCount = 0;
+
+		// Set this store in the snapshot manager and load
+		snapshotManager.setStore(this);
+		snapshotManager.loadInitialSnapshot();
+
+		debug.log("Store loaded from snapshot successfully");
 	}
 
 	/**

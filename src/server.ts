@@ -1,13 +1,13 @@
 import * as path from "node:path"; // For path manipulation
-import { store } from "./store/store";
 import { snapshotManager } from "./persistence/snapshot-manager";
 import {
-	handleSocketOpen,
-	handleSocketData,
 	handleSocketClose,
-	handleSocketError,
+	handleSocketData,
 	handleSocketDrain,
+	handleSocketError,
+	handleSocketOpen,
 } from "./socket/handlers";
+import { store } from "./store/store";
 import { debug } from "./utils/debug";
 
 // Set the store in the snapshot manager

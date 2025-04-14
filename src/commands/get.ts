@@ -1,6 +1,6 @@
 import type { Socket } from "bun";
+import { NULL_RESPONSE, formatBulkString, formatError } from "../protocol/resp";
 import type { KeyValueStore } from "../store/store";
-import { formatBulkString, formatError, NULL_RESPONSE } from "../protocol/resp";
 
 // Pre-format common error for GET
 const GET_WRONG_ARGS = formatError(

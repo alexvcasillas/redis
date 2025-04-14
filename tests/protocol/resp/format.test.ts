@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
-	formatBulkString,
-	formatSimpleString,
-	formatInteger,
-	formatError,
 	NULL_RESPONSE,
+	formatBulkString,
+	formatError,
+	formatInteger,
+	formatSimpleString,
 } from "../../../src/protocol/resp";
 
 describe("RESP Response Formatting", () => {

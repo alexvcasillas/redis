@@ -1,23 +1,37 @@
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
-import { KeyValueStore } from "../../src/store/store";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	setSystemTime,
+	test,
+} from "bun:test";
+import { unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { unlinkSync } from "node:fs";
+import { KeyValueStore } from "../../src/store/store";
 
 describe("KeyValueStore", () => {
 	let store: KeyValueStore;
-	let snapshotPath: string;
+	const snapshotPath = join(tmpdir(), "test-snapshot.json");
+	const initialTime = Date.now();
 
 	beforeEach(() => {
 		store = new KeyValueStore();
-		snapshotPath = join(tmpdir(), `redis-test-${Date.now()}.snapshot`);
+		setSystemTime(new Date(initialTime));
+		try {
+			unlinkSync(snapshotPath);
+		} catch {
+			// Ignore if file doesn't exist
+		}
 	});
 
 	afterEach(() => {
 		store.dispose();
+		setSystemTime(); // Reset to real time
 		try {
 			unlinkSync(snapshotPath);
-		} catch (error) {
+		} catch {
 			// Ignore if file doesn't exist
 		}
 	});
@@ -82,11 +96,14 @@ describe("KeyValueStore", () => {
 			expect(store.ttl(key)).toBe(-1);
 		});
 
-		test("should expire keys after TTL", async () => {
+		test("should expire keys after TTL", () => {
 			const key = "expire-key";
 			store.set(key, Buffer.from("value"), 1);
 			expect(store.get(key)).toBeDefined();
-			await Bun.sleep(1100); // Wait for key to expire
+
+			// Advance time by 1.1 seconds
+			setSystemTime(new Date(initialTime + 1100));
+
 			expect(store.get(key)).toBeUndefined();
 		});
 	});

@@ -1,9 +1,17 @@
-import { describe, expect, test, beforeEach, afterEach } from "bun:test";
+import {
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	setSystemTime,
+	test,
+} from "bun:test";
 import { TTLManager } from "../../src/store/ttl";
 
 describe("TTLManager", () => {
 	let ttlManager: TTLManager;
 	let deletedKeys: string[];
+	const initialTime = Date.now();
 
 	beforeEach(() => {
 		deletedKeys = [];
@@ -12,10 +20,12 @@ describe("TTLManager", () => {
 				deletedKeys.push(key);
 			},
 		});
+		setSystemTime(new Date(initialTime));
 	});
 
 	afterEach(() => {
 		ttlManager.dispose();
+		setSystemTime(); // Reset to real time
 	});
 
 	describe("Basic TTL Operations", () => {
@@ -49,18 +59,24 @@ describe("TTLManager", () => {
 	});
 
 	describe("Expiration Behavior", () => {
-		test("should expire keys after TTL", async () => {
+		test("should expire keys after TTL", () => {
 			ttlManager.expire("expire-key", 1);
 			expect(ttlManager.ttl("expire-key")).toBeGreaterThan(0);
-			await Bun.sleep(1100);
+
+			// Advance time by 1.1 seconds
+			setSystemTime(new Date(initialTime + 1100));
+
 			expect(ttlManager.ttl("expire-key")).toBe(-1);
 			expect(deletedKeys).toContain("expire-key");
 		});
 
-		test("should expire keys with millisecond precision", async () => {
+		test("should expire keys with millisecond precision", () => {
 			ttlManager.pexpire("expire-key", 500);
 			expect(ttlManager.pttl("expire-key")).toBeGreaterThan(0);
-			await Bun.sleep(600);
+
+			// Advance time by 600ms
+			setSystemTime(new Date(initialTime + 600));
+
 			expect(ttlManager.pttl("expire-key")).toBe(-1);
 			expect(deletedKeys).toContain("expire-key");
 		});
@@ -75,11 +91,15 @@ describe("TTLManager", () => {
 			expect(deletedKeys).toContain("negative-ttl");
 		});
 
-		test("should correctly identify expired keys", async () => {
+		test("should correctly identify expired keys", () => {
 			ttlManager.expire("test-key", 1);
 			expect(ttlManager.isExpired("test-key")).toBe(false);
-			await Bun.sleep(1100);
+
+			// Advance time by 1.1 seconds
+			setSystemTime(new Date(initialTime + 1100));
+
 			expect(ttlManager.isExpired("test-key")).toBe(true);
+			expect(deletedKeys).toContain("test-key");
 		});
 	});
 

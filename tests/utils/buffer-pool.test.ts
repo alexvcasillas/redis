@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { EnhancedBufferPool } from "../../src/utils/buffer-pool";
 
 describe("EnhancedBufferPool", () => {

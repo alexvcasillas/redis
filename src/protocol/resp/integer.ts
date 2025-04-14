@@ -1,8 +1,8 @@
 import {
-	ZERO_RESPONSE,
 	ONE_RESPONSE,
-	TWO_RESPONSE,
 	THREE_RESPONSE,
+	TWO_RESPONSE,
+	ZERO_RESPONSE,
 } from "./constants";
 
 /**

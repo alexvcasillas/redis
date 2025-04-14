@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import * as path from "node:path";
-import { debug } from "../utils/debug";
 import type { KeyValueStore } from "../store/store";
+import { debug } from "../utils/debug";
 
 interface SaveRule {
 	seconds: number;
@@ -12,7 +12,7 @@ export class SnapshotManager {
 	private rules: SaveRule[] = [];
 	private nextCheckTime = 0;
 	private timer: NodeJS.Timeout | null = null;
-	private lastSaveTime = Date.now();
+	private lastSaveTime: Date | null = null;
 	private lastDirtyCount = 0;
 	private snapshotFilePath: string;
 	private store: KeyValueStore | null = null;
@@ -32,6 +32,8 @@ export class SnapshotManager {
 
 	public setStore(store: KeyValueStore): void {
 		this.store = store;
+		this.lastSaveTime = null;
+		this.lastDirtyCount = 0;
 		this.scheduleNextCheck();
 	}
 
@@ -107,7 +109,7 @@ export class SnapshotManager {
 		const dirtyCount = this.store.getDirtyCount();
 
 		// Check if we need to save now based on rules
-		const elapsedSeconds = (now - this.lastSaveTime) / 1000;
+		const elapsedSeconds = (now - (this.lastSaveTime?.getTime() || 0)) / 1000;
 
 		for (const rule of this.rules) {
 			if (dirtyCount >= rule.changes && elapsedSeconds >= rule.seconds) {
@@ -222,7 +224,7 @@ export class SnapshotManager {
 
 		try {
 			this.saveSnapshotToFile(this.store.getStore(), this.snapshotFilePath);
-			this.lastSaveTime = Date.now();
+			this.lastSaveTime = new Date();
 			this.lastDirtyCount = 0;
 			this.scheduleNextCheck();
 		} catch (error) {
@@ -250,32 +252,46 @@ export class SnapshotManager {
 	}
 
 	public getLastSaveTime(): Date | null {
-		return new Date(this.lastSaveTime);
+		return this.lastSaveTime;
 	}
 
 	public loadInitialSnapshot(): void {
 		if (!this.store) {
-			debug.warn("Store not set, skipping initial snapshot load");
+			debug.warn("Cannot load snapshot: store not set");
 			return;
 		}
 
 		try {
 			const loadedStore = this.loadSnapshotFromFile(this.snapshotFilePath);
-			this.store.loadFromSnapshot(loadedStore);
-		} catch (loadError) {
-			debug.error("Critical error during initial snapshot load:", loadError);
-			// Decide if you want to exit or continue with an empty store
-			// process.exit(1);
+			if (loadedStore.size > 0) {
+				this.store.loadFromSnapshot(loadedStore);
+				this.lastSaveTime = new Date();
+				debug.log("Initial snapshot loaded successfully");
+			} else {
+				debug.log(
+					"No initial snapshot found or empty snapshot, starting with empty store",
+				);
+			}
+		} catch (error) {
+			if (error instanceof Error && error.name === "FileNotFoundError") {
+				debug.log("No initial snapshot found, starting with empty store");
+				return;
+			}
+			throw error;
 		}
 	}
 
 	public saveSnapshot(filePath: string): void {
 		if (!this.store) {
-			debug.warn("Store not set, skipping snapshot save");
+			debug.warn("Cannot save snapshot: store not set");
 			return;
 		}
-		this.saveSnapshotToFile(this.store.getStore(), filePath);
-		this.lastSaveTime = Date.now();
+
+		const storeData = this.store.getStore();
+		const serializedData = this.serializeStore(storeData);
+		Bun.write(filePath, serializedData);
+		this.lastSaveTime = new Date();
+		debug.log("Snapshot saved successfully");
 	}
 
 	/**
@@ -288,6 +304,53 @@ export class SnapshotManager {
 			return;
 		}
 		this.scheduleNextCheck();
+	}
+
+	private checkAndSave(now: number): void {
+		const store = this.store;
+		if (!store) return;
+
+		const dirtyCount = store.getDirtyCount();
+		const lastSaveTime = this.lastSaveTime;
+		const currentLastSaveTime = lastSaveTime ? lastSaveTime.getTime() : 0;
+		const elapsedSeconds = (now - currentLastSaveTime) / 1000;
+
+		for (const rule of this.rules) {
+			if (dirtyCount >= rule.changes && elapsedSeconds >= rule.seconds) {
+				// Need to save now
+				this.save();
+				return;
+			}
+		}
+
+		// If no immediate save needed, schedule next check
+		let earliestCheck = Number.POSITIVE_INFINITY;
+
+		for (const rule of this.rules) {
+			if (dirtyCount >= rule.changes) {
+				const timeUntilSave = Math.max(
+					0,
+					(rule.seconds - elapsedSeconds) * 1000,
+				);
+				earliestCheck = Math.min(earliestCheck, timeUntilSave);
+			}
+		}
+
+		// If no rules match current dirty count, check again in 1 minute
+		if (earliestCheck === Number.POSITIVE_INFINITY) {
+			earliestCheck = 60000;
+		}
+
+		// Schedule next check
+		const delay = Math.max(0, earliestCheck);
+		this.timer = setTimeout(() => {
+			this.checkAndSave(Date.now());
+		}, delay);
+	}
+
+	private serializeStore(store: Map<string, Buffer>): string {
+		const storeObject = Object.fromEntries(store.entries());
+		return JSON.stringify(storeObject, null, 2);
 	}
 }
 
