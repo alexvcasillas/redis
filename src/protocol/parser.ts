@@ -97,10 +97,9 @@ export class RESPParser {
 				if (Array.isArray(value)) {
 					// Convert array items to strings efficiently
 					const command = this._convertArrayToStrings(value);
-					if (command.length > 0) {
-						this.onCommand(command);
-					}
-				} else {
+					this.onCommand(command); // Always call onCommand for arrays, even if empty
+				} else if (value !== null) {
+					// Skip null values
 					// Handle single values by wrapping them in an array
 					const command = this._convertValueToString(value);
 					if (command !== null) {
@@ -114,7 +113,7 @@ export class RESPParser {
 			} catch (e) {
 				this.bufferSize = 0;
 				this.offset = 0;
-				break;
+				throw e; // Re-throw the error to be handled by the socket handler
 			}
 		}
 
@@ -146,9 +145,8 @@ export class RESPParser {
 		const result: string[] = [];
 		for (const item of value) {
 			const converted = this._convertValueToString(item);
-			if (converted !== null) {
-				result.push(converted);
-			}
+			// Include null values in the result array to properly handle empty command names
+			result.push(converted === null ? "" : converted);
 		}
 		return result;
 	}
@@ -291,6 +289,10 @@ export class RESPParser {
 
 		if (length === -1) {
 			return null; // Null bulk string
+		}
+
+		if (length < -1) {
+			throw new Error(`Invalid bulk string length: ${length}`);
 		}
 
 		const totalLength = length + CRLF.length;

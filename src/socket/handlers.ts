@@ -11,10 +11,10 @@ const clientParsers = new WeakMap<Socket, RESPParser>();
 // Pre-create common error messages as buffers for better performance
 const COMMON_ERRORS = {
 	EMPTY_COMMAND: Buffer.from(
-		formatError("ERR protocol error: received empty command array"),
+		formatError("protocol error: received empty command array"),
 	),
 	EMPTY_NAME: Buffer.from(
-		formatError("ERR protocol error: received empty command name"),
+		formatError("protocol error: received empty command name"),
 	),
 } as const;
 
@@ -31,13 +31,17 @@ function getUpperCaseCommand(name: string): string {
 }
 
 function handleCommand(commandArgs: string[], socket: Socket) {
-	if (commandArgs.length === 0) {
+	if (!Array.isArray(commandArgs) || commandArgs.length === 0) {
 		socket.write(COMMON_ERRORS.EMPTY_COMMAND);
 		return;
 	}
 
 	const commandNameArg = commandArgs[0];
-	if (commandNameArg === undefined) {
+	if (
+		commandNameArg === undefined ||
+		commandNameArg === null ||
+		commandNameArg === ""
+	) {
 		socket.write(COMMON_ERRORS.EMPTY_NAME);
 		return;
 	}
@@ -53,17 +57,11 @@ function handleCommand(commandArgs: string[], socket: Socket) {
 			const errorMessage =
 				error instanceof Error ? error.message : "Unknown error";
 			debug.error(`Error executing command '${commandName}':`, error);
-			socket.write(
-				Buffer.from(
-					formatError(
-						`ERR executing command '${commandName}': ${errorMessage}`,
-					),
-				),
-			);
+			socket.write(Buffer.from(formatError(errorMessage)));
 		}
 	} else {
 		socket.write(
-			Buffer.from(formatError(`ERR unknown command \`${commandName}\``)),
+			Buffer.from(formatError(`unknown command \`${commandName}\``)),
 		);
 	}
 }
@@ -88,9 +86,7 @@ export function handleSocketData(socket: Socket, data: Buffer) {
 			debug.error(`Parser error for ${socket.remoteAddress}:`, error);
 			const errorMessage =
 				error instanceof Error ? error.message : "Invalid input";
-			socket.write(
-				Buffer.from(formatError(`ERR protocol error: ${errorMessage}`)),
-			);
+			socket.write(Buffer.from(formatError(errorMessage)));
 			clientParsers.delete(socket);
 		}
 	} else {

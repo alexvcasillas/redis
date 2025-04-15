@@ -9,25 +9,40 @@ export function handleConfig(
 	socket: Socket,
 	store: KeyValueStore, // Not used by CONFIG GET
 ): void {
-	if (args.length < 1) {
+	if (args.length === 0) {
 		socket.write(
-			formatError("ERR wrong number of arguments for 'config' command"),
+			Buffer.from(
+				formatError("wrong number of arguments for 'config' command"),
+			),
 		);
 		return;
 	}
 
-	const subCommand = args[0]?.toUpperCase();
+	const subCommand = args[0];
 
-	if (subCommand === "GET") {
+	if (subCommand === undefined) {
+		socket.write(
+			Buffer.from(
+				formatError("wrong number of arguments for 'config' command"),
+			),
+		);
+		return;
+	}
+
+	const subCommandLower = subCommand.toLowerCase();
+
+	if (subCommandLower === "get") {
 		if (args.length !== 2) {
 			socket.write(
-				formatError("ERR wrong number of arguments for 'config|get' command"),
+				Buffer.from(
+					formatError("wrong number of arguments for 'config|get' command"),
+				),
 			);
 			return;
 		}
 		const parameter = args[1];
 		if (parameter === undefined) {
-			socket.write(formatError("ERR syntax error"));
+			socket.write(Buffer.from(formatError("syntax error")));
 			return;
 		}
 
@@ -37,17 +52,21 @@ export function handleConfig(
 		const responseValue = ""; // Placeholder value
 		const response = `*2\r\n${formatBulkString(parameter)}${formatBulkString(responseValue)}`;
 		socket.write(response);
-	} else if (subCommand === "SET") {
+	} else if (subCommandLower === "set") {
 		// Not implemented yet
 		socket.write(
-			formatError(
-				"ERR Unsupported CONFIG subcommand or wrong number of arguments for 'SET'",
+			Buffer.from(
+				formatError(
+					"ERR Unsupported CONFIG subcommand or wrong number of arguments for 'SET'",
+				),
 			),
 		);
 	} else {
 		socket.write(
-			formatError(
-				`ERR Unknown subcommand or wrong number of arguments for '${args[0]}'`,
+			Buffer.from(
+				formatError(
+					`Unknown subcommand or wrong number of arguments for '${subCommand}'`,
+				),
 			),
 		);
 	}

@@ -4,9 +4,10 @@ import type { KeyValueStore } from "../store/store";
 
 // Pre-format common error for GET
 const GET_WRONG_ARGS = formatError(
-	"ERR wrong number of arguments for 'get' command",
+	"wrong number of arguments for 'get' command",
 );
-const GET_SYNTAX_ERROR = formatError("ERR syntax error");
+// Pre-create common responses for better performance
+const GET_SYNTAX_ERROR = formatError("syntax error");
 
 export function handleGet(
 	args: string[],
@@ -20,7 +21,9 @@ export function handleGet(
 
 	const key = args[0];
 
-	if (!key) {
+	// A null bulk string becomes an empty string in our parser
+	// We should treat both empty strings and undefined as invalid keys
+	if (key === undefined || key === "") {
 		socket.write(GET_SYNTAX_ERROR);
 		return;
 	}

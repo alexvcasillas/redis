@@ -7,9 +7,16 @@ export function handleSet(
 	socket: Socket,
 	store: KeyValueStore,
 ): void {
-	if (args.length !== 2) {
+	if (args.length < 2) {
 		socket.write(
-			formatError("ERR wrong number of arguments for 'set' command"),
+			Buffer.from(formatError("wrong number of arguments for 'set' command")),
+		);
+		return;
+	}
+
+	if (args.length > 2) {
+		socket.write(
+			Buffer.from(formatError("wrong number of arguments for 'set' command")),
 		);
 		return;
 	}

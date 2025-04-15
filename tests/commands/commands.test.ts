@@ -48,6 +48,17 @@ describe("Redis Commands", () => {
 				"ERR wrong number of arguments",
 			);
 		});
+
+		test("should handle undefined argument correctly", () => {
+			const socket = new MockSocket();
+			const store = new KeyValueStore();
+			// Create an array with an empty slot to simulate undefined
+			const args = new Array(1);
+			handlePing(args, socket as unknown as Socket, store);
+			expect(socket.writes[0]?.toString()).toBe(
+				"-ERR PING argument is missing\r\n",
+			);
+		});
 	});
 
 	describe("GET Command", () => {
@@ -72,6 +83,13 @@ describe("Redis Commands", () => {
 			expect(socket.writes[1]?.toString()).toContain(
 				"ERR wrong number of arguments",
 			);
+		});
+
+		test("should return error with empty key", () => {
+			const socket = new MockSocket();
+			const store = new KeyValueStore();
+			handleGet([""], socket as unknown as Socket, store);
+			expect(socket.writes[0]?.toString()).toBe("-ERR syntax error\r\n");
 		});
 	});
 
@@ -99,6 +117,15 @@ describe("Redis Commands", () => {
 			expect(socket.writes[1]?.toString()).toContain(
 				"ERR wrong number of arguments",
 			);
+		});
+
+		test("should handle undefined key or value", () => {
+			const socket = new MockSocket();
+			const store = new KeyValueStore();
+			// Create an array with empty slots to simulate undefined
+			const args = new Array(2);
+			handleSet(args, socket as unknown as Socket, store);
+			expect(socket.writes[0]?.toString()).toBe("-ERR syntax error\r\n");
 		});
 	});
 

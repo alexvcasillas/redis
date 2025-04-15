@@ -7,9 +7,9 @@ export function handleDel(
 	socket: Socket,
 	store: KeyValueStore,
 ): void {
-	if (args.length < 1) {
+	if (args.length === 0) {
 		socket.write(
-			formatError("ERR wrong number of arguments for 'del' command"),
+			Buffer.from(formatError("wrong number of arguments for 'del' command")),
 		);
 		return;
 	}

@@ -90,8 +90,8 @@ describe("RESP Response Formatting", () => {
 
 	describe("formatError", () => {
 		test("should format syntax error correctly", () => {
-			const result = formatError("ERR syntax error");
-			expect(result.toString()).toBe("-ERR syntax error\r\n");
+			const result = formatError("syntax error");
+			expect(result).toEqual(Buffer.from("-ERR syntax error\r\n"));
 		});
 
 		test("should format custom errors correctly", () => {
