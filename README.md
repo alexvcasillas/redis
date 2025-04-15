@@ -1,5 +1,7 @@
 # Bun Redis Server
 
+![https://img.shields.io/badge/code_coverage-97%25-blue](https://img.shields.io/badge/code_coverage-97%25-blue) ![https://img.shields.io/badge/performance-%C2%B16.7%25-green](https://img.shields.io/badge/performance-%C2%B16.7%25-green)
+
 A Redis server implementation in Bun.
 
 ## Installation
