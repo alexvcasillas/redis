@@ -3,9 +3,9 @@ import {
 	beforeEach,
 	describe,
 	expect,
+	jest,
 	setSystemTime,
 	test,
-	jest,
 } from "bun:test";
 import { TTLManager } from "../../src/store/ttl";
 
